@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    container_name: ollama
+    restart: always
+    # user: "1001:1001"  # Run as non-root user
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+        # limits:
+        #   memory: "8g"  # Max 8GB RAM
+        #   cpus: "4"      # Limit to 4 CPU cores
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+              # device_ids: # Enable MIG on nvidia GPU to segment GPU
+              #   - "MIG-<UUID1>"
+              #   - "MIG-<UUID2>"
+    volumes:
+      - "/opt/openwebui/ollama:/root/.ollama:Z"
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: always
+    # user: "1001:1001"  # Run as non-root user
+    ports:
+      - "4000:4000"
+    depends_on:
+      - ollama
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: "4g"  # Max 4GB RAM for OpenWebUI
+    #       cpus: "2"      # Limit to 2 CPU cores
+    volumes:
+      - "/opt/openwebui/data:/app/backend/data:Z"
+    environment:
+      - PORT=4000
+      - WEBUI_URL=http://localhost:4000
+      - OLLAMA_API_BASE_URL=http://ollama:11434
